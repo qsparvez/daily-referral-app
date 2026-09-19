@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Referral Form</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; padding: 10px; background-color: #f4f4f9; }
+    .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    h2 { text-align: center; color: #333; }
+    .form-group { margin-bottom: 15px; }
+    label { display: block; margin-bottom: 5px; font-weight: bold; }
+    input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+    button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
+    button:hover { background-color: #218838; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Daily Referral Input</h2>
+  <form id="referralForm">
+    <!-- ১. তারিখ -->
+    <div class="form-group">
+      <label>তারিখ (Date):</label>
+      <input type="date" id="date" required>
+    </div>
+
+    <!-- ২. TR Number -->
+    <div class="form-group">
+      <label>TR Number:</label>
+      <input type="text" id="tr" required>
+    </div>
+
+    <!-- ৩. রেফারার -->
+    <div class="form-group">
+      <label>রেফারার (Referrer):</label>
+      <select id="referrerSelect" required>
+        <option value="">নির্বাচন করুন...</option>
+      </select>
+    </div>
+
+    <!-- ৪. পজিশন -->
+    <div class="form-group">
+      <label>পজিশন (Position):</label>
+      <input type="text" id="position" readonly style="background-color: #e9ecef;">
+    </div>
+
+    <!-- ৫. পদবী -->
+    <div class="form-group">
+      <label>পদবী (Designation):</label>
+      <input type="text" id="designation" readonly style="background-color: #e9ecef;">
+    </div>
+
+    <!-- ৬. ঠিকানা -->
+    <div class="form-group">
+      <label>ঠিকানা (Address):</label>
+      <input type="text" id="address" readonly style="background-color: #e9ecef;">
+    </div>
+
+    <!-- ৭. কন্টাক্ট -->
+    <div class="form-group">
+      <label>কন্টাক্ট (Contact):</label>
+      <input type="text" id="contact" readonly style="background-color: #e9ecef;">
+    </div>
+
+    <!-- ৮. Total Bill -->
+    <div class="form-group">
+      <label>Total Bill:</label>
+      <input type="number" id="total" required>
+    </div>
+
+    <!-- ৯. Referral Amount -->
+    <div class="form-group">
+      <label>Referral Amount:</label>
+      <input type="number" id="referral" required>
+    </div>
+
+    <button type="submit">ডাটা সেভ করুন</button>
+  </form>
+</div>
+
+<!-- Firebase SDK & Logic -->
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+
+  // Firebase Config
+  const firebaseConfig = {
+    apiKey: "AIzaSyCrcEv7aglujDcLfuskKrt7YZxbrSqX7IU",
+    authDomain: "exploration-1d56b.firebaseapp.com",
+    projectId: "exploration-1d56b",
+    storageBucket: "exploration-1d56b.firebasestorage.app",
+    messagingSenderId: "351940726460",
+    appId: "1:351940726460:web:be37765974f63b9bb74ab9"
+  };
+
+  // Firebase Initialize
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  // আজকের তারিখ ডিফল্টভাবে সেটিং
+  document.getElementById('date').valueAsDate = new Date();
+
+  // রেফারার ড্রপডাউন লোড করা এবং অটো-ফিল লজিক
+  const referrerSelect = document.getElementById('referrerSelect');
+  let referrersData = [];
+
+  // Firestore থেকে Referrers তালিকা নিয়ে আসা
+  async function loadReferrers() {
+    try {
+      const querySnapshot = await getDocs(collection(db, "referrers"));
+      querySnapshot.forEach((doc) => {
+        const data = doc.data();
+        referrersData.push(data);
+
+        const option = document.createElement('option');
+        option.value = data.name;
+        option.textContent = data.name;
+        referrerSelect.appendChild(option);
+      });
+    } catch (error) {
+      console.error("Error loading referrers: ", error);
+    }
+  }
+
+  // ড্রপডাউন পরিবর্তন হলে স্বয়ংক্রিয়ভাবে ইনপুট ফিল্ডগুলো পূরণ হওয়া
+  referrerSelect.addEventListener('change', (e) => {
+    const selectedName = e.target.value;
+    const selectedReferrer = referrersData.find(r => r.name === selectedName);
+
+    if (selectedReferrer) {
+      document.getElementById('position').value = selectedReferrer.position || '';
+      document.getElementById('designation').value = selectedReferrer.designation || '';
+      document.getElementById('address').value = selectedReferrer.address || '';
+      document.getElementById('contact').value = selectedReferrer.contact || '';
+    } else {
+      document.getElementById('position').value = '';
+      document.getElementById('designation').value = '';
+      document.getElementById('address').value = '';
+      document.getElementById('contact').value = '';
+    }
+  });
+
+  // ফর্ম সাবমিট হলে 'daily_referrals' কালেকশনে ডাটা সেভ হওয়া
+  const referralForm = document.getElementById('referralForm');
+  referralForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const formData = {
+      date: document.getElementById('date').value,
+      tr: document.getElementById('tr').value,
+      referrer: document.getElementById('referrerSelect').value,
+      position: document.getElementById('position').value,
+      designation: document.getElementById('designation').value,
+      address: document.getElementById('address').value,
+      contact: document.getElementById('contact').value,
+      total: Number(document.getElementById('total').value),
+      referral: Number(document.getElementById('referral').value),
+      createdAt: new Date()
+    };
+
+    try {
+      await addDoc(collection(db, "daily_referrals"), formData);
+      alert("ডাটা সফলভাবে সেভ হয়েছে!");
+      referralForm.reset();
+      document.getElementById('date').valueAsDate = new Date();
+    } catch (error) {
+      console.error("Error saving document: ", error);
+      alert("ডাটা সেভ করতে সমস্যা হয়েছে!");
+    }
+  });
+
+  // পেজ লোড হলে ড্রপডাউন ডেটা কল করা
+  loadReferrers();
+</script>
+
+</body>
+</html>
