@@ -15,7 +15,7 @@
     .top-bar-left label { font-weight: bold; }
     .top-bar-right { display: flex; gap: 10px; }
 
-    /* Totals Summary Banner Styling */
+    /* Summary Badges */
     .summary-badge { background: #ffffff; padding: 6px 14px; border-radius: 8px; border: 1px solid #ced4da; font-weight: bold; font-size: 14px; color: #1e293b; display: inline-flex; gap: 6px; }
     .summary-badge span { color: #2563eb; }
 
@@ -39,13 +39,40 @@
       border-radius: 8px; 
     }
 
-    .table-container { overflow-x: auto; }
+    .table-container { overflow-x: auto; overflow-y: visible; }
     table { width: 100%; border-collapse: separate; border-spacing: 0 6px; min-width: 1100px; }
-    th, td { padding: 6px; text-align: left; vertical-align: middle; }
+    th, td { padding: 6px; text-align: left; vertical-align: middle; position: relative; }
     th { background-color: #007bff; color: white; font-size: 14px; white-space: nowrap; padding: 10px; }
     th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
     th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
     
+    /* Searchable Custom Dropdown Styling */
+    .dropdown-wrapper { position: relative; width: 100%; }
+    .dropdown-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      max-height: 200px;
+      overflow-y: auto;
+      background: #ffffff;
+      border: 1px solid #007bff;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      z-index: 1000;
+      display: none;
+      margin-top: 2px;
+    }
+    .dropdown-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+    }
+    .dropdown-item:hover, .dropdown-item.active {
+      background-color: #007bff;
+      color: #ffffff;
+    }
+
     /* Buttons with Rounded Corners */
     button { border-radius: 8px; cursor: pointer; font-weight: bold; border: none; }
     .btn-add { background-color: #28a745; color: white; padding: 10px 20px; font-size: 14px; margin-top: 15px; }
@@ -70,7 +97,7 @@
       <label for="entry-date">Select Date:</label>
       <input type="date" id="entry-date">
       
-      <!-- Top Live Summary Displays -->
+      <!-- Top Summary Displays -->
       <div class="summary-badge">Total Bill: <span id="top-total-bill">0</span> Tk</div>
       <div class="summary-badge">Referral Amt: <span id="top-total-ref">0</span> Tk</div>
     </div>
@@ -144,7 +171,6 @@
     return integerNum.toLocaleString('en-IN');
   }
 
-  // Parse formatted string back to raw integer
   function parseRawNumber(str) {
     if (!str) return 0;
     const cleanStr = str.toString().replace(/,/g, '');
@@ -155,13 +181,11 @@
   // Set today's date by default
   document.getElementById('entry-date').valueAsDate = new Date();
 
-  // Load all referrers from Firestore on page load
+  // Load referrers from Firestore
   async function loadReferrers() {
     try {
       const snapshot = await db.collection('referrers').get();
       referrersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Render initial 10 rows after referrers load
       initDefaultRows(10);
     } catch (error) {
       console.error("Error loading referrers: ", error);
@@ -169,7 +193,6 @@
     }
   }
 
-  // Generate N default rows
   function initDefaultRows(count) {
     document.getElementById('tr-rows').innerHTML = '';
     for (let i = 0; i < count; i++) {
@@ -178,29 +201,27 @@
     calculateTotals();
   }
 
-  // Add a single row
   function addRow() {
     const tbody = document.getElementById('tr-rows');
     const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
-
-    let options = `<option value="">Select Referrer</option>`;
-    referrersList.forEach(ref => {
-      options += `<option value="${ref.id}">${ref.name}</option>`;
-    });
 
     const tr = document.createElement('tr');
     tr.id = `row-${rowId}`;
     tr.innerHTML = `
       <td><input type="text" class="tr-no" placeholder="TR #"></td>
       <td>
-        <select class="ref-select" onchange="autoFillRow('${rowId}', this.value)">
-          ${options}
-        </select>
+        <div class="dropdown-wrapper">
+          <input type="text" class="ref-search" placeholder="Type referrer name..." 
+                 oninput="filterReferrers('${rowId}', this.value)" 
+                 onkeydown="handleDropdownKeys(event, '${rowId}')"
+                 onfocus="filterReferrers('${rowId}', this.value)">
+          <div class="dropdown-list" id="list-${rowId}"></div>
+        </div>
       </td>
-      <td><input type="text" class="position" readonly></td>
-      <td><input type="text" class="designation" readonly></td>
-      <td><input type="text" class="address" readonly></td>
-      <td><input type="text" class="contact" readonly></td>
+      <td><input type="text" class="position" readonly tabindex="-1"></td>
+      <td><input type="text" class="designation" readonly tabindex="-1"></td>
+      <td><input type="text" class="address" readonly tabindex="-1"></td>
+      <td><input type="text" class="contact" readonly tabindex="-1"></td>
       <td><input type="text" class="total" placeholder="0" oninput="handleAmountInput(this)" onblur="formatAmountOnBlur(this)"></td>
       <td><input type="text" class="referral" placeholder="0" oninput="handleAmountInput(this)" onblur="formatAmountOnBlur(this)"></td>
       <td>
@@ -214,28 +235,108 @@
     tbody.appendChild(tr);
   }
 
-  // Handle number input, restrict decimals, and calculate dynamic totals
+  // Filter Referrer List on Typing
+  function filterReferrers(rowId, query) {
+    const listContainer = document.getElementById(`list-${rowId}`);
+    const filtered = referrersList.filter(r => 
+      (r.name || '').toLowerCase().includes(query.toLowerCase())
+    );
+
+    if (filtered.length === 0) {
+      listContainer.style.display = 'none';
+      return;
+    }
+
+    let itemsHtml = '';
+    filtered.forEach((ref, index) => {
+      itemsHtml += `<div class="dropdown-item" data-index="${index}" onclick="selectReferrer('${rowId}', '${ref.id}')">${ref.name}</div>`;
+    });
+
+    listContainer.innerHTML = itemsHtml;
+    listContainer.style.display = 'block';
+  }
+
+  // Handle Keyboard Navigation (Arrow Keys, Enter, Tab)
+  function handleDropdownKeys(event, rowId) {
+    const listContainer = document.getElementById(`list-${rowId}`);
+    const items = listContainer.querySelectorAll('.dropdown-item');
+    let activeItem = listContainer.querySelector('.dropdown-item.active');
+    let activeIndex = activeItem ? parseInt(activeItem.getAttribute('data-index')) : -1;
+
+    if (event.key === 'ArrowDown') {
+      event.preventDefault();
+      if (items.length === 0) return;
+      activeIndex = (activeIndex + 1) % items.length;
+      updateActiveItem(items, activeIndex);
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault();
+      if (items.length === 0) return;
+      activeIndex = (activeIndex - 1 + items.length) % items.length;
+      updateActiveItem(items, activeIndex);
+    } else if (event.key === 'Enter' || event.key === 'Tab') {
+      if (activeItem && listContainer.style.display === 'block') {
+        event.preventDefault();
+        const refName = activeItem.textContent;
+        const referrer = referrersList.find(r => r.name === refName);
+        if (referrer) {
+          selectReferrer(rowId, referrer.id);
+        }
+      }
+    } else if (event.key === 'Escape') {
+      listContainer.style.display = 'none';
+    }
+  }
+
+  function updateActiveItem(items, index) {
+    items.forEach(item => item.classList.remove('active'));
+    if (items[index]) {
+      items[index].classList.add('active');
+      items[index].scrollIntoView({ block: 'nearest' });
+    }
+  }
+
+  // Select Referrer and Jump Cursor Straight to Total Bill
+  function selectReferrer(rowId, referrerId) {
+    const row = document.getElementById(`row-${rowId}`);
+    const listContainer = document.getElementById(`list-${rowId}`);
+    const referrer = referrersList.find(r => r.id === referrerId);
+
+    if (referrer) {
+      row.querySelector('.ref-search').value = referrer.name || '';
+      row.querySelector('.ref-search').setAttribute('data-selected-id', referrer.id);
+      row.querySelector('.position').value = referrer.position || '';
+      row.querySelector('.designation').value = referrer.designation || '';
+      row.querySelector('.address').value = referrer.address || '';
+      row.querySelector('.contact').value = referrer.contact || '';
+    }
+
+    listContainer.style.display = 'none';
+
+    // Jump Focus Directly to Total Bill Field
+    setTimeout(() => {
+      row.querySelector('.total').focus();
+    }, 50);
+  }
+
+  // Close dropdowns when clicking outside
+  document.addEventListener('click', function(e) {
+    if (!e.target.classList.contains('ref-search')) {
+      document.querySelectorAll('.dropdown-list').forEach(el => el.style.display = 'none');
+    }
+  });
+
+  // Handle number input & live calculations
   function handleAmountInput(input) {
     let rawValue = input.value.replace(/[^0-9]/g, '');
-    if (rawValue) {
-      input.value = rawValue;
-    } else {
-      input.value = '';
-    }
+    input.value = rawValue ? rawValue : '';
     calculateTotals();
   }
 
-  // Format amount input on blur to xx,xx,xx,xxx
   function formatAmountOnBlur(input) {
     let raw = parseRawNumber(input.value);
-    if (raw > 0) {
-      input.value = formatBangladeshiCurrency(raw);
-    } else {
-      input.value = '';
-    }
+    input.value = raw > 0 ? formatBangladeshiCurrency(raw) : '';
   }
 
-  // Live calculation of Total Bill and Referral Amount
   function calculateTotals() {
     let grandTotalBill = 0;
     let grandTotalReferral = 0;
@@ -257,32 +358,11 @@
     document.getElementById('bottom-total-ref').textContent = formattedRef;
   }
 
-  // Auto-fill row fields when referrer is selected
-  function autoFillRow(rowId, referrerId) {
-    const row = document.getElementById(`row-${rowId}`);
-    const referrer = referrersList.find(r => r.id === referrerId);
-
-    if (referrer) {
-      row.querySelector('.position').value = referrer.position || '';
-      row.querySelector('.designation').value = referrer.designation || '';
-      row.querySelector('.address').value = referrer.address || '';
-      row.querySelector('.contact').value = referrer.contact || '';
-    } else {
-      row.querySelector('.position').value = '';
-      row.querySelector('.designation').value = '';
-      row.querySelector('.address').value = '';
-      row.querySelector('.contact').value = '';
-    }
-  }
-
-  // Remove row
   function removeRow(rowId) {
-    const row = document.getElementById(`row-${rowId}`);
-    row.remove();
+    document.getElementById(`row-${rowId}`).remove();
     calculateTotals();
   }
 
-  // Clear entire form and reset to 10 empty rows
   function clearForm() {
     if (confirm("Are you sure you want to clear all entered data in this form?")) {
       document.getElementById('entry-date').valueAsDate = new Date();
@@ -290,7 +370,7 @@
     }
   }
 
-  // Save all rows to Firestore at once
+  // Save all rows to Firestore
   async function saveAllTRs() {
     const date = document.getElementById('entry-date').value;
     if (!date) {
@@ -304,10 +384,10 @@
 
     rows.forEach(row => {
       const trNo = row.querySelector('.tr-no').value.trim();
-      const refSelect = row.querySelector('.ref-select');
-      const refName = refSelect.options[refSelect.selectedIndex]?.text || '';
+      const refInput = row.querySelector('.ref-search');
+      const refName = refInput.value.trim();
       
-      if (trNo && refSelect.value) {
+      if (trNo && refName) {
         const docRef = db.collection('daily_referrals').doc();
         batch.set(docRef, {
           Date: date,
@@ -334,14 +414,13 @@
     try {
       await batch.commit();
       alert(`Successfully saved ${validRowsCount} TR entries!`);
-      initDefaultRows(10); // Reset to 10 fresh rows
+      initDefaultRows(10);
     } catch (error) {
       console.error("Error saving entries: ", error);
       alert("Failed to save data. Check console for details.");
     }
   }
 
-  // Initialize
   window.onload = loadReferrers;
 </script>
 
