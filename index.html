@@ -1,178 +1,348 @@
 <!DOCTYPE html>
-<html lang="bn">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Referral Form</title>
+  <title>Daily Referral Data Entry</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; padding: 10px; background-color: #f4f4f9; }
-    .container { max-width: 500px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    h2 { text-align: center; color: #333; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input, select { width: 100%; padding: 8px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
-    button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 4px; font-size: 16px; cursor: pointer; }
-    button:hover { background-color: #218838; }
+    * { box-sizing: border-box; font-family: Arial, sans-serif; }
+    body { padding: 20px; background-color: #f4f7f6; margin: 0; }
+    .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+    h2 { margin-top: 0; color: #333; }
+    
+    .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; background: #eef2f5; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
+    .top-bar-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
+    .top-bar-left label { font-weight: bold; }
+    .top-bar-right { display: flex; gap: 10px; }
+
+    /* Totals Summary Banner Styling */
+    .summary-badge { background: #ffffff; padding: 6px 14px; border-radius: 8px; border: 1px solid #ced4da; font-weight: bold; font-size: 14px; color: #1e293b; display: inline-flex; gap: 6px; }
+    .summary-badge span { color: #2563eb; }
+
+    /* Inputs, Selects & DatePicker - 10% / 8px Border Radius */
+    input, select { 
+      width: 100%; 
+      padding: 8px 10px; 
+      border: 1px solid #ccc; 
+      border-radius: 8px; 
+      font-size: 13px; 
+      outline: none;
+    }
+    input:focus, select:focus { border-color: #007bff; }
+    input[readonly] { background-color: #e9ecef; color: #495057; }
+    
+    .top-bar input[type="date"] { 
+      font-size: 15px; 
+      padding: 8px 12px; 
+      width: auto;
+      border: 1px solid #ccc; 
+      border-radius: 8px; 
+    }
+
+    .table-container { overflow-x: auto; }
+    table { width: 100%; border-collapse: separate; border-spacing: 0 6px; min-width: 1100px; }
+    th, td { padding: 6px; text-align: left; vertical-align: middle; }
+    th { background-color: #007bff; color: white; font-size: 14px; white-space: nowrap; padding: 10px; }
+    th:first-child { border-top-left-radius: 8px; border-bottom-left-radius: 8px; }
+    th:last-child { border-top-right-radius: 8px; border-bottom-right-radius: 8px; }
+    
+    /* Buttons with Rounded Corners */
+    button { border-radius: 8px; cursor: pointer; font-weight: bold; border: none; }
+    .btn-add { background-color: #28a745; color: white; padding: 10px 20px; font-size: 14px; margin-top: 15px; }
+    .btn-remove { background-color: #dc3545; color: white; padding: 6px 10px; border-radius: 8px; }
+    .btn-save { background-color: #007bff; color: white; padding: 10px 20px; font-size: 14px; }
+    .btn-save-bottom { width: 100%; padding: 14px; font-size: 16px; margin-top: 20px; }
+    .btn-clear { background-color: #6c757d; color: white; padding: 10px 20px; font-size: 14px; }
+    
+    .bottom-summary-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: #eef2f5; padding: 12px 18px; border-radius: 12px; }
+
+    button:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h2>Daily Referral Input</h2>
-  <form id="referralForm">
-    <!-- ১. তারিখ -->
-    <div class="form-group">
-      <label>তারিখ (Date):</label>
-      <input type="date" id="date" required>
-    </div>
+  <h2>Daily Referral Sheet Entry</h2>
 
-    <!-- ২. TR Number -->
-    <div class="form-group">
-      <label>TR Number:</label>
-      <input type="text" id="tr" required>
+  <!-- Top Action Bar -->
+  <div class="top-bar">
+    <div class="top-bar-left">
+      <label for="entry-date">Select Date:</label>
+      <input type="date" id="entry-date">
+      
+      <!-- Top Live Summary Displays -->
+      <div class="summary-badge">Total Bill: <span id="top-total-bill">0</span> Tk</div>
+      <div class="summary-badge">Referral Amt: <span id="top-total-ref">0</span> Tk</div>
     </div>
-
-    <!-- ৩. রেফারার -->
-    <div class="form-group">
-      <label>রেফারার (Referrer):</label>
-      <select id="referrerSelect" required>
-        <option value="">নির্বাচন করুন...</option>
-      </select>
+    <div class="top-bar-right">
+      <button type="button" class="btn-clear" onclick="clearForm()">Clear Form</button>
+      <button type="button" class="btn-save" onclick="saveAllTRs()">Save All Entries</button>
     </div>
+  </div>
 
-    <!-- ৪. পজিশন -->
-    <div class="form-group">
-      <label>পজিশন (Position):</label>
-      <input type="text" id="position" readonly style="background-color: #e9ecef;">
+  <!-- Spreadsheet Style Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th style="width: 100px;">TR No.</th>
+          <th style="width: 220px;">Referrer Name</th>
+          <th style="width: 120px;">Position</th>
+          <th style="width: 140px;">Designation</th>
+          <th style="width: 130px;">Address</th>
+          <th style="width: 110px;">Contact</th>
+          <th style="width: 110px;">Total Bill</th>
+          <th style="width: 110px;">Referral Amt</th>
+          <th style="width: 110px;">Status</th>
+          <th style="width: 50px;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="tr-rows">
+        <!-- 10 rows generated dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Bottom Summary & Add Button -->
+  <div class="bottom-summary-container">
+    <button type="button" class="btn-add" style="margin-top:0;" onclick="addRow()">+ Add More Row</button>
+    <div style="display: flex; gap: 10px;">
+      <div class="summary-badge">Total Bill: <span id="bottom-total-bill">0</span> Tk</div>
+      <div class="summary-badge">Referral Amt: <span id="bottom-total-ref">0</span> Tk</div>
     </div>
+  </div>
 
-    <!-- ৫. পদবী -->
-    <div class="form-group">
-      <label>পদবী (Designation):</label>
-      <input type="text" id="designation" readonly style="background-color: #e9ecef;">
-    </div>
-
-    <!-- ৬. ঠিকানা -->
-    <div class="form-group">
-      <label>ঠিকানা (Address):</label>
-      <input type="text" id="address" readonly style="background-color: #e9ecef;">
-    </div>
-
-    <!-- ৭. কন্টাক্ট -->
-    <div class="form-group">
-      <label>কন্টাক্ট (Contact):</label>
-      <input type="text" id="contact" readonly style="background-color: #e9ecef;">
-    </div>
-
-    <!-- ৮. Total Bill -->
-    <div class="form-group">
-      <label>Total Bill:</label>
-      <input type="number" id="total" required>
-    </div>
-
-    <!-- ৯. Referral Amount -->
-    <div class="form-group">
-      <label>Referral Amount:</label>
-      <input type="number" id="referral" required>
-    </div>
-
-    <button type="submit">ডাটা সেভ করুন</button>
-  </form>
+  <button type="button" class="btn-save btn-save-bottom" onclick="saveAllTRs()">Save All Entries (Single Click)</button>
 </div>
 
-<!-- Firebase SDK & Logic -->
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-  import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
-  // Firebase Config
+<script>
+  // Firebase configuration
   const firebaseConfig = {
     apiKey: "AIzaSyCrcEv7aglujDcLfuskKrt7YZxbrSqX7IU",
     authDomain: "exploration-1d56b.firebaseapp.com",
+    databaseURL: "https://exploration-1d56b-default-rtdb.firebaseio.com",
     projectId: "exploration-1d56b",
     storageBucket: "exploration-1d56b.firebasestorage.app",
     messagingSenderId: "351940726460",
-    appId: "1:351940726460:web:be37765974f63b9bb74ab9"
+    appId: "1:351940726460:web:be37765974f63b9bb74ab9",
+    measurementId: "G-Z3YSZ1L074"
   };
 
-  // Firebase Initialize
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
 
-  // আজকের তারিখ ডিফল্টভাবে সেটিং
-  document.getElementById('date').valueAsDate = new Date();
+  let referrersList = [];
 
-  // রেফারার ড্রপডাউন লোড করা এবং অটো-ফিল লজিক
-  const referrerSelect = document.getElementById('referrerSelect');
-  let referrersData = [];
+  // South Asian (Bangladeshi) Number Formatter (xx,xx,xx,xxx) without decimals
+  function formatBangladeshiCurrency(num) {
+    if (isNaN(num) || num === 0 || num === null) return "0";
+    const integerNum = Math.round(num);
+    return integerNum.toLocaleString('en-IN');
+  }
 
-  // Firestore থেকে Referrers তালিকা নিয়ে আসা
+  // Parse formatted string back to raw integer
+  function parseRawNumber(str) {
+    if (!str) return 0;
+    const cleanStr = str.toString().replace(/,/g, '');
+    const parsed = parseInt(cleanStr, 10);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  // Set today's date by default
+  document.getElementById('entry-date').valueAsDate = new Date();
+
+  // Load all referrers from Firestore on page load
   async function loadReferrers() {
     try {
-      const querySnapshot = await getDocs(collection(db, "referrers"));
-      querySnapshot.forEach((doc) => {
-        const data = doc.data();
-        referrersData.push(data);
-
-        const option = document.createElement('option');
-        option.value = data.name;
-        option.textContent = data.name;
-        referrerSelect.appendChild(option);
-      });
+      const snapshot = await db.collection('referrers').get();
+      referrersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Render initial 10 rows after referrers load
+      initDefaultRows(10);
     } catch (error) {
       console.error("Error loading referrers: ", error);
+      alert("Failed to load referrers list.");
     }
   }
 
-  // ড্রপডাউন পরিবর্তন হলে স্বয়ংক্রিয়ভাবে ইনপুট ফিল্ডগুলো পূরণ হওয়া
-  referrerSelect.addEventListener('change', (e) => {
-    const selectedName = e.target.value;
-    const selectedReferrer = referrersData.find(r => r.name === selectedName);
-
-    if (selectedReferrer) {
-      document.getElementById('position').value = selectedReferrer.position || '';
-      document.getElementById('designation').value = selectedReferrer.designation || '';
-      document.getElementById('address').value = selectedReferrer.address || '';
-      document.getElementById('contact').value = selectedReferrer.contact || '';
-    } else {
-      document.getElementById('position').value = '';
-      document.getElementById('designation').value = '';
-      document.getElementById('address').value = '';
-      document.getElementById('contact').value = '';
+  // Generate N default rows
+  function initDefaultRows(count) {
+    document.getElementById('tr-rows').innerHTML = '';
+    for (let i = 0; i < count; i++) {
+      addRow();
     }
-  });
+    calculateTotals();
+  }
 
-  // ফর্ম সাবমিট হলে 'daily_referrals' কালেকশনে ডাটা সেভ হওয়া
-  const referralForm = document.getElementById('referralForm');
-  referralForm.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // Add a single row
+  function addRow() {
+    const tbody = document.getElementById('tr-rows');
+    const rowId = Date.now() + Math.random().toString(36).substr(2, 5);
 
-    const formData = {
-      date: document.getElementById('date').value,
-      tr: document.getElementById('tr').value,
-      referrer: document.getElementById('referrerSelect').value,
-      position: document.getElementById('position').value,
-      designation: document.getElementById('designation').value,
-      address: document.getElementById('address').value,
-      contact: document.getElementById('contact').value,
-      total: Number(document.getElementById('total').value),
-      referral: Number(document.getElementById('referral').value),
-      createdAt: new Date()
-    };
+    let options = `<option value="">Select Referrer</option>`;
+    referrersList.forEach(ref => {
+      options += `<option value="${ref.id}">${ref.name}</option>`;
+    });
+
+    const tr = document.createElement('tr');
+    tr.id = `row-${rowId}`;
+    tr.innerHTML = `
+      <td><input type="text" class="tr-no" placeholder="TR #"></td>
+      <td>
+        <select class="ref-select" onchange="autoFillRow('${rowId}', this.value)">
+          ${options}
+        </select>
+      </td>
+      <td><input type="text" class="position" readonly></td>
+      <td><input type="text" class="designation" readonly></td>
+      <td><input type="text" class="address" readonly></td>
+      <td><input type="text" class="contact" readonly></td>
+      <td><input type="text" class="total" placeholder="0" oninput="handleAmountInput(this)" onblur="formatAmountOnBlur(this)"></td>
+      <td><input type="text" class="referral" placeholder="0" oninput="handleAmountInput(this)" onblur="formatAmountOnBlur(this)"></td>
+      <td>
+        <select class="status">
+          <option value="Unpaid">Unpaid</option>
+          <option value="Paid">Paid</option>
+        </select>
+      </td>
+      <td><button type="button" class="btn-remove" onclick="removeRow('${rowId}')">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // Handle number input, restrict decimals, and calculate dynamic totals
+  function handleAmountInput(input) {
+    let rawValue = input.value.replace(/[^0-9]/g, '');
+    if (rawValue) {
+      input.value = rawValue;
+    } else {
+      input.value = '';
+    }
+    calculateTotals();
+  }
+
+  // Format amount input on blur to xx,xx,xx,xxx
+  function formatAmountOnBlur(input) {
+    let raw = parseRawNumber(input.value);
+    if (raw > 0) {
+      input.value = formatBangladeshiCurrency(raw);
+    } else {
+      input.value = '';
+    }
+  }
+
+  // Live calculation of Total Bill and Referral Amount
+  function calculateTotals() {
+    let grandTotalBill = 0;
+    let grandTotalReferral = 0;
+
+    document.querySelectorAll('#tr-rows tr').forEach(row => {
+      const totalInput = row.querySelector('.total');
+      const referralInput = row.querySelector('.referral');
+
+      if (totalInput) grandTotalBill += parseRawNumber(totalInput.value);
+      if (referralInput) grandTotalReferral += parseRawNumber(referralInput.value);
+    });
+
+    const formattedBill = formatBangladeshiCurrency(grandTotalBill);
+    const formattedRef = formatBangladeshiCurrency(grandTotalReferral);
+
+    document.getElementById('top-total-bill').textContent = formattedBill;
+    document.getElementById('top-total-ref').textContent = formattedRef;
+    document.getElementById('bottom-total-bill').textContent = formattedBill;
+    document.getElementById('bottom-total-ref').textContent = formattedRef;
+  }
+
+  // Auto-fill row fields when referrer is selected
+  function autoFillRow(rowId, referrerId) {
+    const row = document.getElementById(`row-${rowId}`);
+    const referrer = referrersList.find(r => r.id === referrerId);
+
+    if (referrer) {
+      row.querySelector('.position').value = referrer.position || '';
+      row.querySelector('.designation').value = referrer.designation || '';
+      row.querySelector('.address').value = referrer.address || '';
+      row.querySelector('.contact').value = referrer.contact || '';
+    } else {
+      row.querySelector('.position').value = '';
+      row.querySelector('.designation').value = '';
+      row.querySelector('.address').value = '';
+      row.querySelector('.contact').value = '';
+    }
+  }
+
+  // Remove row
+  function removeRow(rowId) {
+    const row = document.getElementById(`row-${rowId}`);
+    row.remove();
+    calculateTotals();
+  }
+
+  // Clear entire form and reset to 10 empty rows
+  function clearForm() {
+    if (confirm("Are you sure you want to clear all entered data in this form?")) {
+      document.getElementById('entry-date').valueAsDate = new Date();
+      initDefaultRows(10);
+    }
+  }
+
+  // Save all rows to Firestore at once
+  async function saveAllTRs() {
+    const date = document.getElementById('entry-date').value;
+    if (!date) {
+      alert("Please select a date.");
+      return;
+    }
+
+    const rows = document.querySelectorAll('#tr-rows tr');
+    const batch = db.batch();
+    let validRowsCount = 0;
+
+    rows.forEach(row => {
+      const trNo = row.querySelector('.tr-no').value.trim();
+      const refSelect = row.querySelector('.ref-select');
+      const refName = refSelect.options[refSelect.selectedIndex]?.text || '';
+      
+      if (trNo && refSelect.value) {
+        const docRef = db.collection('daily_referrals').doc();
+        batch.set(docRef, {
+          Date: date,
+          TR: trNo,
+          Referrer: refName,
+          Position: row.querySelector('.position').value,
+          Designation: row.querySelector('.designation').value,
+          Address: row.querySelector('.address').value,
+          Contact: row.querySelector('.contact').value,
+          Total: parseRawNumber(row.querySelector('.total').value),
+          Referral: parseRawNumber(row.querySelector('.referral').value),
+          PaymentStatus: row.querySelector('.status').value,
+          createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        validRowsCount++;
+      }
+    });
+
+    if (validRowsCount === 0) {
+      alert("Please fill at least TR Number and Referrer Name for one entry before saving.");
+      return;
+    }
 
     try {
-      await addDoc(collection(db, "daily_referrals"), formData);
-      alert("ডাটা সফলভাবে সেভ হয়েছে!");
-      referralForm.reset();
-      document.getElementById('date').valueAsDate = new Date();
+      await batch.commit();
+      alert(`Successfully saved ${validRowsCount} TR entries!`);
+      initDefaultRows(10); // Reset to 10 fresh rows
     } catch (error) {
-      console.error("Error saving document: ", error);
-      alert("ডাটা সেভ করতে সমস্যা হয়েছে!");
+      console.error("Error saving entries: ", error);
+      alert("Failed to save data. Check console for details.");
     }
-  });
+  }
 
-  // পেজ লোড হলে ড্রপডাউন ডেটা কল করা
-  loadReferrers();
+  // Initialize
+  window.onload = loadReferrers;
 </script>
 
 </body>
