@@ -3,12 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daily Referral Data Entry</title>
+  <title>Daily Referral Data Entry - LB Hospital & Diagnostic Center</title>
   <style>
     * { box-sizing: border-box; font-family: Arial, sans-serif; }
     body { padding: 20px; background-color: #f4f7f6; margin: 0; }
     .container { max-width: 1400px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-    h2 { margin-top: 0; color: #333; }
+    h2, h3 { margin-top: 0; color: #333; }
     
     .top-bar { display: flex; align-items: center; justify-content: space-between; gap: 15px; margin-bottom: 20px; background: #eef2f5; padding: 15px; border-radius: 12px; flex-wrap: wrap; }
     .top-bar-left { display: flex; align-items: center; gap: 15px; flex-wrap: wrap; }
@@ -19,7 +19,7 @@
     .summary-badge { background: #ffffff; padding: 6px 14px; border-radius: 8px; border: 1px solid #ced4da; font-weight: bold; font-size: 14px; color: #1e293b; display: inline-flex; gap: 6px; }
     .summary-badge span { color: #2563eb; }
 
-    /* Inputs, Selects & DatePicker - 10% / 8px Border Radius */
+    /* Inputs, Selects & DatePicker */
     input, select { 
       width: 100%; 
       padding: 8px 10px; 
@@ -31,8 +31,8 @@
     input:focus, select:focus { border-color: #007bff; }
     input[readonly] { background-color: #e9ecef; color: #495057; }
     
-    .top-bar input[type="date"] { 
-      font-size: 15px; 
+    .top-bar input[type="date"], select { 
+      font-size: 14px; 
       padding: 8px 12px; 
       width: auto;
       border: 1px solid #ccc; 
@@ -78,10 +78,46 @@
     .btn-add { background-color: #28a745; color: white; padding: 10px 20px; font-size: 14px; margin-top: 15px; }
     .btn-remove { background-color: #dc3545; color: white; padding: 6px 10px; border-radius: 8px; }
     .btn-save { background-color: #007bff; color: white; padding: 10px 20px; font-size: 14px; }
+    .btn-print-view { background-color: #17a2b8; color: white; padding: 10px 20px; font-size: 14px; }
     .btn-save-bottom { width: 100%; padding: 14px; font-size: 16px; margin-top: 20px; }
     .btn-clear { background-color: #6c757d; color: white; padding: 10px 20px; font-size: 14px; }
     
     .bottom-summary-container { display: flex; justify-content: space-between; align-items: center; margin-top: 15px; background: #eef2f5; padding: 12px 18px; border-radius: 12px; }
+
+    /* Filter Panel Styling */
+    .filter-panel { background: #e2e8f0; padding: 15px; border-radius: 12px; margin-bottom: 20px; display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+    .filter-panel label { font-weight: bold; font-size: 14px; }
+
+    /* Print Preview Sheet Layout (A4 Format) */
+    .print-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 2000; overflow-y: auto; padding: 20px; }
+    .print-sheet { background: #fff; max-width: 800px; margin: 0 auto; padding: 40px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,0.2); position: relative; color: #000; }
+    
+    .header-container { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #333; padding-bottom: 15px; margin-bottom: 20px; }
+    .header-logo { height: 75px; width: auto; object-fit: contain; }
+    .header-text { text-align: center; flex: 1; margin: 0 15px; }
+    .header-text h1 { margin: 0; font-size: 22px; color: #1e293b; text-transform: uppercase; }
+    .header-text p { margin: 3px 0; font-size: 12px; color: #475569; }
+
+    .report-title { text-align: center; font-size: 16px; font-weight: bold; text-transform: uppercase; margin-bottom: 15px; text-decoration: underline; }
+    .report-meta { display: flex; justify-content: space-between; font-size: 13px; font-weight: bold; margin-bottom: 15px; }
+
+    /* Print Table Styling */
+    .print-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; font-size: 12px; }
+    .print-table th, .print-table td { border: 1px solid #000; padding: 6px 8px; text-align: left; }
+    .print-table th { background-color: #f1f5f9; color: #000; text-align: center; }
+
+    .in-words-box { font-size: 13px; font-weight: bold; font-style: italic; margin-top: 15px; margin-bottom: 30px; text-transform: capitalize; border-top: 1px dashed #666; padding-top: 8px; }
+
+    .signature-container { display: flex; justify-content: space-between; margin-top: 60px; padding: 0 20px; }
+    .signature-box { border-top: 1px solid #000; width: 180px; text-align: center; font-size: 12px; font-weight: bold; padding-top: 5px; }
+
+    /* Printing Media Rules */
+    @media print {
+      body * { visibility: hidden; }
+      .print-sheet, .print-sheet * { visibility: visible; }
+      .print-sheet { position: absolute; left: 0; top: 0; width: 100%; max-width: 100%; padding: 0; box-shadow: none; }
+      .no-print { display: none !important; }
+    }
 
     button:hover { opacity: 0.9; }
   </style>
@@ -107,6 +143,20 @@
     </div>
   </div>
 
+  <!-- Filter & Report Panel -->
+  <div class="filter-panel">
+    <label>Filter Records:</label>
+    <label for="filter-date" style="font-weight:normal;">Date:</label>
+    <input type="date" id="filter-date">
+
+    <label for="filter-position" style="font-weight:normal;">Position:</label>
+    <select id="filter-position" style="width:160px;">
+      <option value="ALL">All Positions</option>
+    </select>
+
+    <button type="button" class="btn-print-view" onclick="fetchAndShowReport()">Search & Preview Print</button>
+  </div>
+
   <!-- Spreadsheet Style Table -->
   <div class="table-container">
     <table>
@@ -125,7 +175,7 @@
         </tr>
       </thead>
       <tbody id="tr-rows">
-        <!-- 10 rows generated dynamically -->
+        <!-- Rows generated dynamically -->
       </tbody>
     </table>
   </div>
@@ -140,6 +190,71 @@
   </div>
 
   <button type="button" class="btn-save btn-save-bottom" onclick="saveAllTRs()">Save All Entries (Single Click)</button>
+</div>
+
+<!-- Print Preview Modal -->
+<div class="print-modal" id="printModal">
+  <div class="print-sheet">
+    <div class="no-print" style="text-align: right; margin-bottom: 15px;">
+      <button type="button" class="btn-save" onclick="window.print()">🖨️ Print Document (A4)</button>
+      <button type="button" class="btn-clear" onclick="closePrintModal()">Close</button>
+    </div>
+
+    <!-- Letterhead Header -->
+    <div class="header-container">
+      <img src="https://drive.google.com/thumbnail?id=1TAzR7iFhUdWttYxmqUVP3iD-ryP25weo&sz=w500" class="header-logo" alt="LB Hospital Logo" onerror="this.onerror=null; this.src='https://drive.google.com/uc?id=1TAzR7iFhUdWttYxmqUVP3iD-ryP25weo';">
+      <div class="header-text">
+        <h1>LB Hospital & Diagnostic Center</h1>
+        <p>Quality Healthcare & Accurate Diagnostics</p>
+      </div>
+    </div>
+
+    <div class="report-title">Daily Referral Summary Report</div>
+    
+    <div class="report-meta">
+      <div>Date: <span id="report-date-val">All</span></div>
+      <div>Position: <span id="report-pos-val">All</span></div>
+    </div>
+
+    <!-- Filtered Output Table -->
+    <table class="print-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>TR No.</th>
+          <th>Referrer Name</th>
+          <th>Position</th>
+          <th>Designation</th>
+          <th>Total Bill (Tk)</th>
+          <th>Referral Amt (Tk)</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody id="print-table-body">
+        <!-- Rendered dynamically -->
+      </tbody>
+      <tfoot>
+        <tr style="font-weight: bold; background-color: #f8fafc;">
+          <td colspan="5" style="text-align: right;">Grand Total:</td>
+          <td id="print-total-bill" style="text-align: right;">0</td>
+          <td id="print-total-ref" style="text-align: right;">0</td>
+          <td></td>
+        </tr>
+      </tfoot>
+    </table>
+
+    <!-- Amount In Words Box -->
+    <div class="in-words-box" id="print-in-words">
+      In words: Zero taka only.
+    </div>
+
+    <!-- Signatures -->
+    <div class="signature-container">
+      <div class="signature-box">Prepared By</div>
+      <div class="signature-box">Checked By</div>
+      <div class="signature-box">Authorized Signature</div>
+    </div>
+  </div>
 </div>
 
 <!-- Firebase SDKs -->
@@ -164,7 +279,7 @@
 
   let referrersList = [];
 
-  // South Asian (Bangladeshi) Number Formatter (xx,xx,xx,xxx) without decimals
+  // South Asian Number Formatter (xx,xx,xxx)
   function formatBangladeshiCurrency(num) {
     if (isNaN(num) || num === 0 || num === null) return "0";
     const integerNum = Math.round(num);
@@ -178,14 +293,58 @@
     return isNaN(parsed) ? 0 : parsed;
   }
 
-  // Set today's date by default
-  document.getElementById('entry-date').valueAsDate = new Date();
+  // Convert Number to Words Function (South Asian / Bangladeshi Format)
+  function numberToWordsBangladeshi(num) {
+    if (num === 0) return "Zero taka only";
 
-  // Load referrers from Firestore
+    const a = ['', 'one ', 'two ', 'three ', 'four ', 'five ', 'six ', 'seven ', 'eight ', 'nine ', 'ten ', 'eleven ', 'twelve ', 'thirteen ', 'fourteen ', 'fifteen ', 'sixteen ', 'seventeen ', 'eighteen ', 'nineteen '];
+    const b = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+    function inWords(n) {
+      if (n < 20) return a[n];
+      let digit = n % 10;
+      return b[Math.floor(n / 10)] + (digit ? "-" + a[digit] : " ");
+    }
+
+    let str = "";
+    let crore = Math.floor(num / 10000000);
+    num %= 10000000;
+    let lakh = Math.floor(num / 100000);
+    num %= 100000;
+    let thousand = Math.floor(num / 1000);
+    num %= 1000;
+    let hundred = Math.floor(num / 100);
+    let remaining = num % 100;
+
+    if (crore > 0) str += inWords(crore) + "crore ";
+    if (lakh > 0) str += inWords(lakh) + "lakh ";
+    if (thousand > 0) str += inWords(thousand) + "thousand ";
+    if (hundred > 0) str += inWords(hundred) + "hundred ";
+    if (remaining > 0) str += (str !== "" ? "and " : "") + inWords(remaining);
+
+    return "In words: " + str.trim() + " taka only.";
+  }
+
+  // Set today's date
+  document.getElementById('entry-date').valueAsDate = new Date();
+  document.getElementById('filter-date').valueAsDate = new Date();
+
+  // Load referrers & populate filter dropdown
   async function loadReferrers() {
     try {
       const snapshot = await db.collection('referrers').get();
       referrersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Populate positions list in filter select
+      const positions = [...new Set(referrersList.map(r => r.position).filter(Boolean))];
+      const posSelect = document.getElementById('filter-position');
+      positions.forEach(pos => {
+        const opt = document.createElement('option');
+        opt.value = pos;
+        opt.textContent = pos;
+        posSelect.appendChild(opt);
+      });
+
       initDefaultRows(10);
     } catch (error) {
       console.error("Error loading referrers: ", error);
@@ -235,7 +394,7 @@
     tbody.appendChild(tr);
   }
 
-  // Filter Referrer List on Typing
+  // Filter Referrer Dropdown List
   function filterReferrers(rowId, query) {
     const listContainer = document.getElementById(`list-${rowId}`);
     const filtered = referrersList.filter(r => 
@@ -256,7 +415,7 @@
     listContainer.style.display = 'block';
   }
 
-  // Handle Keyboard Navigation (Arrow Keys, Enter, Tab)
+  // Handle Dropdown Keyboard Navigation
   function handleDropdownKeys(event, rowId) {
     const listContainer = document.getElementById(`list-${rowId}`);
     const items = listContainer.querySelectorAll('.dropdown-item');
@@ -295,7 +454,7 @@
     }
   }
 
-  // Select Referrer and Jump Cursor Straight to Total Bill
+  // Select Referrer
   function selectReferrer(rowId, referrerId) {
     const row = document.getElementById(`row-${rowId}`);
     const listContainer = document.getElementById(`list-${rowId}`);
@@ -303,7 +462,6 @@
 
     if (referrer) {
       row.querySelector('.ref-search').value = referrer.name || '';
-      row.querySelector('.ref-search').setAttribute('data-selected-id', referrer.id);
       row.querySelector('.position').value = referrer.position || '';
       row.querySelector('.designation').value = referrer.designation || '';
       row.querySelector('.address').value = referrer.address || '';
@@ -312,20 +470,12 @@
 
     listContainer.style.display = 'none';
 
-    // Jump Focus Directly to Total Bill Field
     setTimeout(() => {
       row.querySelector('.total').focus();
     }, 50);
   }
 
-  // Close dropdowns when clicking outside
-  document.addEventListener('click', function(e) {
-    if (!e.target.classList.contains('ref-search')) {
-      document.querySelectorAll('.dropdown-list').forEach(el => el.style.display = 'none');
-    }
-  });
-
-  // Handle number input & live calculations
+  // Input Formatting & Math
   function handleAmountInput(input) {
     let rawValue = input.value.replace(/[^0-9]/g, '');
     input.value = rawValue ? rawValue : '';
@@ -370,7 +520,7 @@
     }
   }
 
-  // Save all rows to Firestore
+  // Save Entries to Firestore
   async function saveAllTRs() {
     const date = document.getElementById('entry-date').value;
     if (!date) {
@@ -419,6 +569,75 @@
       console.error("Error saving entries: ", error);
       alert("Failed to save data. Check console for details.");
     }
+  }
+
+  // Fetch Filtered Data & Show Printable Report Modal
+  async function fetchAndShowReport() {
+    const filterDate = document.getElementById('filter-date').value;
+    const filterPos = document.getElementById('filter-position').value;
+
+    let query = db.collection('daily_referrals');
+
+    if (filterDate) {
+      query = query.where('Date', '==', filterDate);
+    }
+    if (filterPos !== 'ALL') {
+      query = query.where('Position', '==', filterPos);
+    }
+
+    try {
+      const snapshot = await query.get();
+      const printTbody = document.getElementById('print-table-body');
+      printTbody.innerHTML = '';
+
+      let totalBillSum = 0;
+      let totalRefSum = 0;
+      let count = 1;
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const row = document.createElement('tr');
+        
+        totalBillSum += (data.Total || 0);
+        totalRefSum += (data.Referral || 0);
+
+        row.innerHTML = `
+          <td style="text-align:center;">${count++}</td>
+          <td>${data.TR || ''}</td>
+          <td>${data.Referrer || ''}</td>
+          <td>${data.Position || ''}</td>
+          <td>${data.Designation || ''}</td>
+          <td style="text-align:right;">${formatBangladeshiCurrency(data.Total)}</td>
+          <td style="text-align:right;">${formatBangladeshiCurrency(data.Referral)}</td>
+          <td style="text-align:center;">${data.PaymentStatus || ''}</td>
+        `;
+        printTbody.appendChild(row);
+      });
+
+      if (snapshot.empty) {
+        printTbody.innerHTML = `<tr><td colspan="8" style="text-align:center; padding: 20px;">No records found matching criteria.</td></tr>`;
+      }
+
+      // Update Meta Details & Totals
+      document.getElementById('report-date-val').textContent = filterDate || 'All Dates';
+      document.getElementById('report-pos-val').textContent = filterPos;
+      document.getElementById('print-total-bill').textContent = formatBangladeshiCurrency(totalBillSum);
+      document.getElementById('print-total-ref').textContent = formatBangladeshiCurrency(totalRefSum);
+
+      // In Words Output
+      document.getElementById('print-in-words').textContent = numberToWordsBangladeshi(totalRefSum);
+
+      // Open Modal
+      document.getElementById('printModal').style.display = 'block';
+
+    } catch (error) {
+      console.error("Error fetching report: ", error);
+      alert("Failed to fetch filtered records. Ensure Firestore indexes are created if prompted.");
+    }
+  }
+
+  function closePrintModal() {
+    document.getElementById('printModal').style.display = 'none';
   }
 
   window.onload = loadReferrers;
